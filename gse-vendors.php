@@ -13,6 +13,23 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+// Plugin constants.
+if ( ! defined( 'GSE_VENDORS_VERSION' ) ) {
+    define( 'GSE_VENDORS_VERSION', '0.1.0' );
+}
+
+if ( ! defined( 'GSE_VENDORS_PATH' ) ) {
+    define( 'GSE_VENDORS_PATH', __DIR__ . '/' );
+}
+
+if ( ! defined( 'GSE_VENDORS_URL' ) ) {
+    $gse_vendors_url_value = '';
+    if ( function_exists( 'plugin_dir_url' ) ) {
+        $gse_vendors_url_value = call_user_func( 'plugin_dir_url', __FILE__ );
+    }
+    define( 'GSE_VENDORS_URL', $gse_vendors_url_value );
+}
+
 
 // Include plugin components from the includes directory if present.
 $gse_vendors_includes_dir = __DIR__ . '/includes/';
