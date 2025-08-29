@@ -10,7 +10,7 @@
 
 * [x] **Create plugin folder & files**: `wp-content/plugins/gse-vendors/` with `gse-vendors.php`, `includes/`, `assets/`, `readme.md`.
 * [x] **Add plugin header** in `gse-vendors.php` and block direct access with `ABSPATH` check.
-* [ ] **Wire class autoloads**: require files from `includes/` (CPT, taxonomies, meta, REST, admin, roles/caps, activator).
+* [x] **Wire class autoloads**: require files from `includes/` (CPT, taxonomies, meta, REST, admin, roles/caps, activator).
 * [ ] **Define constants**: `GSE_VENDORS_PATH`, `GSE_VENDORS_URL`, `GSE_VENDORS_VERSION`.
 * [ ] **Register hooks**: `init` (CPT/tax/meta), `rest_api_init` (routes), `admin_init` (admin UI boot), activation hook (db/migrations).
 
