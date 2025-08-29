@@ -63,3 +63,39 @@ foreach ( $gse_vendors_files as $gse_vendors_file ) {
 }
 
 
+// Register hooks.
+if ( function_exists( 'add_action' ) ) {
+    call_user_func( 'add_action', 'init', function () {
+        if ( function_exists( 'gse_vendors_register_cpt' ) ) {
+            call_user_func( 'gse_vendors_register_cpt' );
+        }
+        if ( function_exists( 'gse_vendors_register_taxonomies' ) ) {
+            call_user_func( 'gse_vendors_register_taxonomies' );
+        }
+        if ( function_exists( 'gse_vendors_register_meta' ) ) {
+            call_user_func( 'gse_vendors_register_meta' );
+        }
+    } );
+
+    call_user_func( 'add_action', 'rest_api_init', function () {
+        if ( function_exists( 'gse_vendors_register_rest_routes' ) ) {
+            call_user_func( 'gse_vendors_register_rest_routes' );
+        }
+    } );
+
+    call_user_func( 'add_action', 'admin_init', function () {
+        if ( function_exists( 'gse_vendors_admin_boot' ) ) {
+            call_user_func( 'gse_vendors_admin_boot' );
+        }
+    } );
+}
+
+if ( function_exists( 'register_activation_hook' ) ) {
+    call_user_func( 'register_activation_hook', __FILE__, function () {
+        if ( function_exists( 'gse_vendors_activate' ) ) {
+            call_user_func( 'gse_vendors_activate' );
+        }
+    } );
+}
+
+
