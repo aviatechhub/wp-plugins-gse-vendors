@@ -28,6 +28,10 @@ if ( ! function_exists( 'gse_vendors_register_cpt' ) ) {
             'show_ui' => true,
             'show_in_rest' => true,
             'supports' => array( 'title', 'editor', 'thumbnail' ),
+            'rewrite' => array(
+                'slug' => 'vendors',
+                'with_front' => false,
+            ),
             'has_archive' => 'vendors',
         );
 
