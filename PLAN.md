@@ -18,7 +18,7 @@
 
 ## 1) Data Model — Core Vendor Entity
 
-* [ ] **Register CPT `vendor`**: public=true (front), `show_in_rest=true`, supports `title`, `editor`, `thumbnail`, archive `vendors`.
+* [x] **Register CPT `vendor`**: public=true (front), `show_in_rest=true`, supports `title`, `editor`, `thumbnail`, archive `vendors`.
 * [ ] **Define slug rules**: rewrite slug `vendors`, ensure pretty permalinks behavior.
 * [ ] **(Optional) Register taxonomies**: `gse_location` (hierarchical), `gse_certification` (flat), `show_in_rest=true`.
 * [ ] **Register basic info meta**:
