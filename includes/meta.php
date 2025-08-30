@@ -69,12 +69,23 @@ if ( ! function_exists( 'gse_vendors_register_meta' ) ) {
             }
         }
 
+        // Auth: require ability to edit the vendor post for updates
+        if ( ! function_exists( 'gse_vendors_auth_can_edit_post_meta' ) ) {
+            function gse_vendors_auth_can_edit_post_meta( $allowed, $meta_key, $post_id, $user_id, $cap, $caps ) {
+                if ( function_exists( 'current_user_can' ) ) {
+                    return (bool) call_user_func( 'current_user_can', 'edit_post', $post_id );
+                }
+                return false;
+            }
+        }
+
         // Headquarters (string)
         call_user_func( 'register_post_meta', 'vendor', 'headquarters', array(
             'type' => 'string',
             'single' => true,
             'show_in_rest' => true,
             'sanitize_callback' => 'gse_vendors_sanitize_text_meta',
+            'auth_callback' => 'gse_vendors_auth_can_edit_post_meta',
         ) );
 
         // Years in Operation (integer)
@@ -83,6 +94,7 @@ if ( ! function_exists( 'gse_vendors_register_meta' ) ) {
             'single' => true,
             'show_in_rest' => true,
             'sanitize_callback' => 'gse_vendors_sanitize_absint_meta',
+            'auth_callback' => 'gse_vendors_auth_can_edit_post_meta',
         ) );
 
         // Website URL (string with uri format)
@@ -96,6 +108,7 @@ if ( ! function_exists( 'gse_vendors_register_meta' ) ) {
                 ),
             ),
             'sanitize_callback' => 'gse_vendors_sanitize_url_meta',
+            'auth_callback' => 'gse_vendors_auth_can_edit_post_meta',
         ) );
 
         // Contact (object: email, phone, whatsapp)
@@ -121,6 +134,7 @@ if ( ! function_exists( 'gse_vendors_register_meta' ) ) {
                 ),
             ),
             'sanitize_callback' => 'gse_vendors_sanitize_contact_meta',
+            'auth_callback' => 'gse_vendors_auth_can_edit_post_meta',
         ) );
     }
 }

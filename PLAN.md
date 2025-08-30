@@ -28,7 +28,7 @@
   * [x] `website_url` (string/url, single, show\_in\_rest)
   * [x] `contact` (object `{email, phone, whatsapp}`, single, show\_in\_rest with schema)
 * [x] **Sanitizers**: text, `absint`, URL sanitizer, phone sanitizer (strip non-dial digits).
-* [ ] **Auth callbacks** for meta update: require `edit_post` on vendor (will later be constrained to admins via capability mapping).
+* [x] **Auth callbacks** for meta update: require `edit_post` on vendor (will later be constrained to admins via capability mapping).
 
 ---
 
