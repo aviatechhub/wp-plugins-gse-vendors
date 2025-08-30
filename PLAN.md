@@ -21,12 +21,12 @@
 * [x] **Register CPT `vendor`**: public=true (front), `show_in_rest=true`, supports `title`, `editor`, `thumbnail`, archive `vendors`.
 * [x] **Define slug rules**: rewrite slug `vendors`, ensure pretty permalinks behavior.
 * [x] **(Optional) Register taxonomies**: `gse_location` (hierarchical), `gse_certification` (flat), `show_in_rest=true`.
-* [ ] **Register basic info meta**:
+* [x] **Register basic info meta**:
 
-  * [ ] `headquarters` (string, single, show\_in\_rest)
-  * [ ] `years_in_operation` (integer, single, show\_in\_rest)
-  * [ ] `website_url` (string/url, single, show\_in\_rest)
-  * [ ] `contact` (object `{email, phone, whatsapp}`, single, show\_in\_rest with schema)
+  * [x] `headquarters` (string, single, show\_in\_rest)
+  * [x] `years_in_operation` (integer, single, show\_in\_rest)
+  * [x] `website_url` (string/url, single, show\_in\_rest)
+  * [x] `contact` (object `{email, phone, whatsapp}`, single, show\_in\_rest with schema)
 * [ ] **Sanitizers**: text, `absint`, URL sanitizer, phone sanitizer (strip non-dial digits).
 * [ ] **Auth callbacks** for meta update: require `edit_post` on vendor (will later be constrained to admins via capability mapping).
 
