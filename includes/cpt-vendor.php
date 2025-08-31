@@ -27,6 +27,7 @@ if ( ! function_exists( 'gse_vendors_register_cpt' ) ) {
             'public' => true,
             'show_ui' => true,
             'show_in_rest' => true,
+            'rest_base' => 'vendors',
             'supports' => array( 'title', 'editor', 'thumbnail' ),
             'rewrite' => array(
                 'slug' => 'vendors',

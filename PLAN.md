@@ -50,7 +50,7 @@
 
 ## 3) REST API — Vendors CRUD & Search
 
-* [ ] **Expose core endpoints** via WP REST (`/wp/v2/vendors`) for read (public) and write (guarded).
+* [x] **Expose core endpoints** via WP REST (`/wp/v2/vendors`) for read (public) and write (guarded).
 * [ ] **Computed field** `basic_info_summary` (read-only) on `vendor` entity (aggregates meta, tax term names, logo media id).
 * [ ] **Custom route: search** `GET /wp-json/gse/v1/vendors/search`
 
