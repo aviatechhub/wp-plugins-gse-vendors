@@ -53,6 +53,10 @@ if ( ! class_exists( 'GSE_Vendor' ) ) {
             return new self( $post_id );
         }
 
+        public static function getById( $post_id, $require_published = true ) {
+            return self::load( $post_id, $require_published );
+        }
+
         public function get_basic_info_summary() {
             return array(
                 'meta' => $this->meta,
