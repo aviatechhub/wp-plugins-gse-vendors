@@ -56,9 +56,9 @@
 
   * [x] Query params: `q`, `location`, `cert`, `per_page`, `page`.
   * [x] Response: items (id, title, permalink, `basic_info_summary`), total, pages.
-* [ ] **Custom route: vendor GET** `GET /gse/v1/vendors/{id}`
+* [x] **Custom route: vendor GET** `GET /gse/v1/vendors/{id}`
 
-  * [ ] Return vendor with meta, tax, featured media URL, `basic_info_summary`.
+  * [x] Return vendor with meta, tax, featured media URL, `basic_info_summary`.
 * [ ] **Custom route: vendor CREATE** `POST /gse/v1/vendors`
 
   * [ ] Body: title, status (default `publish`), meta fields, taxonomy IDs.

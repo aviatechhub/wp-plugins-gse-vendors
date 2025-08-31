@@ -77,6 +77,102 @@ if ( ! function_exists( 'gse_vendors_register_rest_routes' ) ) {
             ),
         ) );
 
+        // Custom route: get single vendor by ID
+        call_user_func( 'register_rest_route', 'gse/v1', '/vendors/(?P<id>\d+)', array(
+            'methods' => 'GET',
+            'permission_callback' => function () { return true; },
+            'args' => array(
+                'id' => array(
+                    'type' => 'integer',
+                    'required' => true,
+                    'minimum' => 1,
+                ),
+            ),
+            'callback' => function ( $request ) {
+                $post_id = isset( $request['id'] ) ? (int) $request['id'] : 0;
+                if ( $post_id <= 0 ) {
+                    if ( class_exists( 'WP_Error' ) ) {
+                        $wp_error_class = 'WP_Error';
+                        return new $wp_error_class( 'gse_invalid_id', 'Invalid vendor id', array( 'status' => 400 ) );
+                    }
+                    return array( 'error' => 'Invalid vendor id', 'status' => 400 );
+                }
+
+                $post = null;
+                if ( function_exists( 'get_post' ) ) {
+                    $post = call_user_func( 'get_post', $post_id );
+                }
+
+                $is_vendor = $post && isset( $post->post_type ) && $post->post_type === 'vendor';
+                $is_published = $post && isset( $post->post_status ) && $post->post_status === 'publish';
+                if ( ! $is_vendor || ! $is_published ) {
+                    if ( class_exists( 'WP_Error' ) ) {
+                        $wp_error_class = 'WP_Error';
+                        return new $wp_error_class( 'gse_not_found', 'Vendor not found', array( 'status' => 404 ) );
+                    }
+                    return array( 'error' => 'Vendor not found', 'status' => 404 );
+                }
+
+                $title = isset( $post->post_title ) ? (string) $post->post_title : '';
+                $permalink = '';
+                if ( function_exists( 'get_permalink' ) ) {
+                    $permalink = (string) call_user_func( 'get_permalink', $post_id );
+                }
+
+                // Meta
+                $headquarters = '';
+                $years_in_operation = 0;
+                $website_url = '';
+                $contact = array();
+                if ( function_exists( 'get_post_meta' ) ) {
+                    $headquarters = (string) call_user_func( 'get_post_meta', $post_id, 'headquarters', true );
+                    $years_in_operation = (int) call_user_func( 'get_post_meta', $post_id, 'years_in_operation', true );
+                    $website_url = (string) call_user_func( 'get_post_meta', $post_id, 'website_url', true );
+                    $contact = call_user_func( 'get_post_meta', $post_id, 'contact', true );
+                    if ( ! is_array( $contact ) ) { $contact = array(); }
+                }
+
+                // Taxonomies
+                $locations = array();
+                $certifications = array();
+                if ( function_exists( 'wp_get_post_terms' ) ) {
+                    $loc_terms = call_user_func( 'wp_get_post_terms', $post_id, 'gse_location', array( 'fields' => 'names' ) );
+                    $locations = ( function_exists( 'is_wp_error' ) && call_user_func( 'is_wp_error', $loc_terms ) ) ? array() : (array) $loc_terms;
+
+                    $cert_terms = call_user_func( 'wp_get_post_terms', $post_id, 'gse_certification', array( 'fields' => 'names' ) );
+                    $certifications = ( function_exists( 'is_wp_error' ) && call_user_func( 'is_wp_error', $cert_terms ) ) ? array() : (array) $cert_terms;
+                }
+
+                // Featured image id (logo)
+                $logo_id = function_exists( 'get_post_thumbnail_id' ) ? (int) call_user_func( 'get_post_thumbnail_id', $post_id ) : 0;
+
+                $summary = array(
+                    'meta' => array(
+                        'headquarters' => $headquarters,
+                        'years_in_operation' => $years_in_operation,
+                        'website_url' => $website_url,
+                        'contact' => $contact,
+                    ),
+                    'locations' => array_values( array_filter( $locations ) ),
+                    'certifications' => array_values( array_filter( $certifications ) ),
+                    'logo_media_id' => $logo_id,
+                );
+
+                return array(
+                    'id' => $post_id,
+                    'title' => $title,
+                    'permalink' => $permalink,
+                    'meta' => $summary['meta'],
+                    'tax' => array(
+                        'locations' => $summary['locations'],
+                        'certifications' => $summary['certifications'],
+                    ),
+                    'logo_media_id' => $logo_id,
+                    'basic_info_summary' => $summary,
+                );
+            },
+        ) );
+
         // Custom route: search vendors
         call_user_func( 'register_rest_route', 'gse/v1', '/vendors/search', array(
             'methods' => 'GET',
