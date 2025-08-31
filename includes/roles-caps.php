@@ -57,3 +57,15 @@ if ( function_exists( 'add_action' ) ) {
 }
 
 
+// Internal role catalog (filterable)
+if ( ! function_exists( 'gse_vendors_get_role_catalog' ) ) {
+    function gse_vendors_get_role_catalog() {
+        $roles = array( 'owner', 'manager', 'editor', 'viewer' );
+        if ( function_exists( 'apply_filters' ) ) {
+            return (array) call_user_func( 'apply_filters', 'gse_vendors_role_catalog', $roles );
+        }
+        return $roles;
+    }
+}
+
+
