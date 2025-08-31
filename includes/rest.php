@@ -15,28 +15,30 @@ if ( ! function_exists( 'gse_vendors_register_rest_routes' ) ) {
             'get_callback' => function ( $object, $field_name, $request ) {
                 $post_id = isset( $object['id'] ) ? (int) $object['id'] : 0;
                 if ( $post_id <= 0 ) {
-                    return null;
-                }
-                if ( class_exists( 'GSE_Vendor' ) ) {
-                    $vendor = call_user_func( array( 'GSE_Vendor', 'load' ), $post_id, false );
-                    if ( $vendor ) {
-                        return $vendor->get_basic_info_summary();
+                    if ( class_exists( 'WP_Error' ) ) {
+                        $wp_error_class = 'WP_Error';
+                        return new $wp_error_class( 'gse_invalid_id', 'Invalid vendor id', array( 'status' => 400 ) );
                     }
+                    return array( 'error' => 'Invalid vendor id', 'status' => 400 );
+                }
+                if ( ! class_exists( 'GSE_Vendor' ) ) {
+                    if ( class_exists( 'WP_Error' ) ) {
+                        $wp_error_class = 'WP_Error';
+                        return new $wp_error_class( 'gse_dependency_missing', 'Vendor model unavailable', array( 'status' => 500 ) );
+                    }
+                    return array( 'error' => 'Vendor model unavailable', 'status' => 500 );
                 }
 
-                // Fallback (should rarely run)
-                $logo_id = function_exists( 'get_post_thumbnail_id' ) ? (int) call_user_func( 'get_post_thumbnail_id', $post_id ) : 0;
-                return array(
-                    'meta' => array(
-                        'headquarters' => function_exists( 'get_post_meta' ) ? (string) call_user_func( 'get_post_meta', $post_id, 'headquarters', true ) : '',
-                        'years_in_operation' => function_exists( 'get_post_meta' ) ? (int) call_user_func( 'get_post_meta', $post_id, 'years_in_operation', true ) : 0,
-                        'website_url' => function_exists( 'get_post_meta' ) ? (string) call_user_func( 'get_post_meta', $post_id, 'website_url', true ) : '',
-                        'contact' => function_exists( 'get_post_meta' ) ? (array) call_user_func( 'get_post_meta', $post_id, 'contact', true ) : array(),
-                    ),
-                    'locations' => array(),
-                    'certifications' => array(),
-                    'logo_media_id' => $logo_id,
-                );
+                $vendor = call_user_func( array( 'GSE_Vendor', 'load' ), $post_id, false );
+                if ( ! $vendor ) {
+                    if ( class_exists( 'WP_Error' ) ) {
+                        $wp_error_class = 'WP_Error';
+                        return new $wp_error_class( 'gse_not_found', 'Vendor not found', array( 'status' => 404 ) );
+                    }
+                    return array( 'error' => 'Vendor not found', 'status' => 404 );
+                }
+
+                return $vendor->get_basic_info_summary();
             },
             'schema' => array(
                 'type' => 'object',
@@ -80,18 +82,21 @@ if ( ! function_exists( 'gse_vendors_register_rest_routes' ) ) {
                     return array( 'error' => 'Vendor not found', 'status' => 404 );
                 }
 
-                if ( class_exists( 'GSE_Vendor' ) ) {
-                    $vendor = call_user_func( array( 'GSE_Vendor', 'load' ), $post_id, true );
-                    if ( $vendor ) {
-                        return $vendor->to_array();
-                    }
+                if ( ! class_exists( 'GSE_Vendor' ) ) {
+                    $wp_error_class = 'WP_Error';
+                    return new $wp_error_class( 'gse_dependency_missing', 'Vendor model unavailable', array( 'status' => 500 ) );
                 }
 
-                if ( class_exists( 'WP_Error' ) ) {
-                    $wp_error_class = 'WP_Error';
-                    return new $wp_error_class( 'gse_not_found', 'Vendor not found', array( 'status' => 404 ) );
+                $vendor = call_user_func( array( 'GSE_Vendor', 'load' ), $post_id, true );
+                if ( ! $vendor ) {
+                    if ( class_exists( 'WP_Error' ) ) {
+                        $wp_error_class = 'WP_Error';
+                        return new $wp_error_class( 'gse_not_found', 'Vendor not found', array( 'status' => 404 ) );
+                    }
+                    return array( 'error' => 'Vendor not found', 'status' => 404 );
                 }
-                return array( 'error' => 'Vendor not found', 'status' => 404 );
+
+                return $vendor->to_array();
             },
         ) );
 
@@ -178,32 +183,28 @@ if ( ! function_exists( 'gse_vendors_register_rest_routes' ) ) {
                             $post_id = isset( $post->ID ) ? (int) $post->ID : 0;
                             if ( $post_id <= 0 ) { continue; }
 
-                            if ( class_exists( 'GSE_Vendor' ) ) {
-                                $vendor = call_user_func( array( 'GSE_Vendor', 'load' ), $post_id, true );
-                                if ( $vendor ) {
-                                    $items[] = array(
-                                        'id' => $vendor->id,
-                                        'title' => $vendor->title,
-                                        'permalink' => $vendor->permalink,
-                                        'basic_info_summary' => $vendor->get_basic_info_summary(),
-                                    );
-                                    continue;
+                            if ( ! class_exists( 'GSE_Vendor' ) ) {
+                                if ( class_exists( 'WP_Error' ) ) {
+                                    $wp_error_class = 'WP_Error';
+                                    return new $wp_error_class( 'gse_dependency_missing', 'Vendor model unavailable', array( 'status' => 500 ) );
                                 }
+                                return array( 'error' => 'Vendor model unavailable', 'status' => 500 );
                             }
 
-                            // Fallback minimal
-                            $title = isset( $post->post_title ) ? (string) $post->post_title : '';
-                            $permalink = function_exists( 'get_permalink' ) ? (string) call_user_func( 'get_permalink', $post_id ) : '';
+                            $vendor = call_user_func( array( 'GSE_Vendor', 'load' ), $post_id, true );
+                            if ( ! $vendor ) {
+                                if ( class_exists( 'WP_Error' ) ) {
+                                    $wp_error_class = 'WP_Error';
+                                    return new $wp_error_class( 'gse_not_found', 'Vendor not found during search item build', array( 'status' => 404, 'post_id' => $post_id ) );
+                                }
+                                return array( 'error' => 'Vendor not found', 'status' => 404 );
+                            }
+
                             $items[] = array(
-                                'id' => $post_id,
-                                'title' => $title,
-                                'permalink' => $permalink,
-                                'basic_info_summary' => array(
-                                    'meta' => array(),
-                                    'locations' => array(),
-                                    'certifications' => array(),
-                                    'logo_media_id' => 0,
-                                ),
+                                'id' => $vendor->id,
+                                'title' => $vendor->title,
+                                'permalink' => $vendor->permalink,
+                                'basic_info_summary' => $vendor->get_basic_info_summary(),
                             );
                         }
                     }
