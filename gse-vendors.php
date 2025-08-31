@@ -38,6 +38,8 @@ $gse_vendors_files = array(
     // Custom Post Type and Taxonomies.
     'cpt-vendor.php',
     'taxonomies.php',
+	// Domain models
+	'models/class-vendor.php',
 
     // Meta registration and sanitizers.
     'meta.php',
