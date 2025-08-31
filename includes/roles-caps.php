@@ -101,4 +101,51 @@ if ( ! function_exists( 'gse_vendors_get_capability_matrix' ) ) {
     }
 }
 
+// Guard function for REST permissions: does a user have a capability on a vendor?
+if ( ! function_exists( 'gse_vendors_user_can_vendor' ) ) {
+    function gse_vendors_user_can_vendor( $user_id, $vendor_id, $capability ) {
+        $user_id = (int) $user_id;
+        $vendor_id = (int) $vendor_id;
+        $capability = is_string( $capability ) ? $capability : '';
+
+        if ( $user_id <= 0 || $vendor_id <= 0 || $capability === '' ) {
+            return false;
+        }
+
+        // Admins always allowed.
+        if ( function_exists( 'user_can' ) ) {
+            if ( call_user_func( 'user_can', $user_id, 'administrator' ) ) {
+                return true;
+            }
+        }
+
+        // Look up membership role.
+        global $wpdb;
+        if ( ! isset( $wpdb ) || ! is_object( $wpdb ) ) {
+            return false;
+        }
+
+        $table_name = isset( $wpdb->prefix ) ? $wpdb->prefix . 'gse_vendor_user_roles' : 'wp_gse_vendor_user_roles';
+        $role = '';
+        if ( method_exists( $wpdb, 'prepare' ) && method_exists( $wpdb, 'get_var' ) ) {
+            $sql = $wpdb->prepare( "SELECT role FROM {$table_name} WHERE vendor_id = %d AND user_id = %d LIMIT 1", $vendor_id, $user_id );
+            $role = (string) $wpdb->get_var( $sql );
+        }
+
+        if ( $role === '' ) {
+            return false;
+        }
+
+        // Check capability matrix.
+        if ( function_exists( 'gse_vendors_get_capability_matrix' ) ) {
+            $matrix = gse_vendors_get_capability_matrix();
+            if ( isset( $matrix[ $role ] ) && isset( $matrix[ $role ][ $capability ] ) ) {
+                return (bool) $matrix[ $role ][ $capability ];
+            }
+        }
+
+        return false;
+    }
+}
+
 
