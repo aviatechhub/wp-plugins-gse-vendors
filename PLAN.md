@@ -52,10 +52,10 @@
 
 * [x] **Expose core endpoints** via WP REST (`/wp/v2/vendors`) for read (public) and write (guarded).
 * [x] **Computed field** `basic_info_summary` (read-only) on `vendor` entity (aggregates meta, tax term names, logo media id).
-* [ ] **Custom route: search** `GET /wp-json/gse/v1/vendors/search`
+* [x] **Custom route: search** `GET /wp-json/gse/v1/vendors/search`
 
-  * [ ] Query params: `q`, `location`, `cert`, `per_page`, `page`.
-  * [ ] Response: items (id, title, permalink, `basic_info_summary`), total, pages.
+  * [x] Query params: `q`, `location`, `cert`, `per_page`, `page`.
+  * [x] Response: items (id, title, permalink, `basic_info_summary`), total, pages.
 * [ ] **Custom route: vendor GET** `GET /gse/v1/vendors/{id}`
 
   * [ ] Return vendor with meta, tax, featured media URL, `basic_info_summary`.
