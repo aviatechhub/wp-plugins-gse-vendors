@@ -68,4 +68,37 @@ if ( ! function_exists( 'gse_vendors_get_role_catalog' ) ) {
     }
 }
 
+// Capability matrix: role -> capabilities (filterable)
+if ( ! function_exists( 'gse_vendors_get_capability_matrix' ) ) {
+    function gse_vendors_get_capability_matrix() {
+        $matrix = array(
+            'owner' => array(
+                'can_manage_members' => true,
+                'can_edit_basic' => true,
+                'can_delete_vendor' => true,
+            ),
+            'manager' => array(
+                'can_manage_members' => true,
+                'can_edit_basic' => true,
+                'can_delete_vendor' => false,
+            ),
+            'editor' => array(
+                'can_manage_members' => false,
+                'can_edit_basic' => true,
+                'can_delete_vendor' => false,
+            ),
+            'viewer' => array(
+                'can_manage_members' => false,
+                'can_edit_basic' => false,
+                'can_delete_vendor' => false,
+            ),
+        );
+
+        if ( function_exists( 'apply_filters' ) ) {
+            return (array) call_user_func( 'apply_filters', 'gse_vendors_capability_matrix', $matrix );
+        }
+        return $matrix;
+    }
+}
+
 

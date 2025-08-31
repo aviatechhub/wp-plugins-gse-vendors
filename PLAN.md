@@ -41,7 +41,7 @@
   * [x] Indexes on `vendor_id`, `user_id`, `role`.
 * [x] **Seed owner**: on vendor publish when no memberships exist, assign the creator as `owner`.
 * [x] **Role catalog** (internal, filterable): `owner`, `manager`, `editor`, `viewer`.
-* [ ] **Capability matrix** (internal, filterable) mapping role → caps (e.g., `can_manage_members`, `can_edit_basic`, `can_delete_vendor`).
+* [x] **Capability matrix** (internal, filterable) mapping role → caps (e.g., `can_manage_members`, `can_edit_basic`, `can_delete_vendor`).
 * [ ] **Guard function** `user_can_vendor(user_id, vendor_id, capability)` for REST permissions.
 
 > Note: wp-admin edit screens will still be **admins only**; these roles only affect REST permissions.
