@@ -207,6 +207,64 @@ if ( ! class_exists( 'GSE_Vendor' ) ) {
         }
 
         /**
+         * List members for a vendor.
+         *
+         * @param int $post_id Vendor post ID
+         * @param int $limit   Maximum number of rows to return (default 100)
+         * @param int $offset  Row offset for pagination (default 0)
+         * @return array|WP_Error Array of members or WP_Error on failure
+         */
+        public static function list_members( $post_id, $limit = 100, $offset = 0 ) {
+            $post_id = (int) $post_id;
+            if ( $post_id <= 0 ) {
+                return new WP_Error( 'gse_invalid_id', 'Invalid vendor id', array( 'status' => 400 ) );
+            }
+
+            $post = function_exists( 'get_post' ) ? get_post( $post_id ) : null;
+            if ( ! $post || ! isset( $post->post_type ) || $post->post_type !== 'vendor' ) {
+                return new WP_Error( 'gse_not_found', 'Vendor not found', array( 'status' => 404 ) );
+            }
+
+            global $wpdb;
+            if ( ! isset( $wpdb ) || ! is_object( $wpdb ) ) {
+                return new WP_Error( 'gse_dependency_missing', 'Database unavailable', array( 'status' => 500 ) );
+            }
+
+            $limit = (int) $limit; if ( $limit <= 0 ) { $limit = 100; }
+            $offset = (int) $offset; if ( $offset < 0 ) { $offset = 0; }
+
+            $table_members = isset( $wpdb->prefix ) ? $wpdb->prefix . 'gse_vendor_user_roles' : 'wp_gse_vendor_user_roles';
+            $users_table = isset( $wpdb->users ) ? $wpdb->users : ( isset( $wpdb->prefix ) ? $wpdb->prefix . 'users' : 'wp_users' );
+
+            if ( method_exists( $wpdb, 'prepare' ) && method_exists( $wpdb, 'get_results' ) ) {
+                $sql = $wpdb->prepare(
+                    "SELECT vur.user_id AS user_id, u.display_name AS display_name, u.user_email AS email, vur.role AS role, vur.assigned_at AS assigned_at\n                     FROM {$table_members} AS vur\n                     LEFT JOIN {$users_table} AS u ON u.ID = vur.user_id\n                     WHERE vur.vendor_id = %d\n                     ORDER BY vur.assigned_at ASC\n                     LIMIT %d OFFSET %d",
+                    $post_id,
+                    $limit,
+                    $offset
+                );
+                $rows = $wpdb->get_results( $sql, ARRAY_A );
+            } else {
+                $rows = array();
+            }
+
+            $members = array();
+            if ( is_array( $rows ) ) {
+                foreach ( $rows as $row ) {
+                    $members[] = array(
+                        'user_id' => isset( $row['user_id'] ) ? (int) $row['user_id'] : 0,
+                        'display_name' => isset( $row['display_name'] ) ? (string) $row['display_name'] : '',
+                        'email' => isset( $row['email'] ) ? (string) $row['email'] : '',
+                        'role' => isset( $row['role'] ) ? (string) $row['role'] : '',
+                        'assigned_at' => isset( $row['assigned_at'] ) ? (string) $row['assigned_at'] : '',
+                    );
+                }
+            }
+
+            return $members;
+        }
+
+        /**
          * Delete a Vendor post and clean up related membership rows.
          *
          * @param int  $post_id       Vendor post ID

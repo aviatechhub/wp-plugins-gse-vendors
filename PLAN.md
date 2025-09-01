@@ -77,10 +77,10 @@
 
 ## 4) REST API — Membership Management (Admins or Vendor Owners/Managers via REST)
 
-* [ ] **List members** `GET /gse/v1/vendors/{id}/members`
+* [x] **List members** `GET /gse/v1/vendors/{id}/members`
 
-  * [ ] Returns: `{ user_id, display_name, email, role, assigned_at }[]`.
-  * [ ] **Permission**: owner/manager or admin; viewers/editors may be denied or given subset (configurable).
+  * [x] Returns: `{ user_id, display_name, email, role, assigned_at }[]`.
+  * [x] **Permission**: owner/manager or admin; viewers/editors may be denied or given subset (configurable).
 * [ ] **Add/Invite member** `POST /gse/v1/vendors/{id}/members`
 
   * [ ] Body: `user_id`, `role`.
