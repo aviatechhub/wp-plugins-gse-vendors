@@ -206,6 +206,48 @@ if ( ! class_exists( 'GSE_Vendor' ) ) {
             return self::getById( $post_id, false );
         }
 
+        /**
+         * Delete a Vendor post and clean up related membership rows.
+         *
+         * @param int  $post_id       Vendor post ID
+         * @param bool $force_delete  Whether to bypass trash (default true)
+         * @return array|WP_Error { deleted (bool), id (int) } on success or WP_Error on failure
+         */
+        public static function delete( $post_id, $force_delete = true ) {
+            $post_id = (int) $post_id;
+            if ( $post_id <= 0 ) {
+                return new WP_Error( 'gse_invalid_id', 'Invalid vendor id', array( 'status' => 400 ) );
+            }
+
+            $post = function_exists( 'get_post' ) ? get_post( $post_id ) : null;
+            if ( ! $post || ! isset( $post->post_type ) || $post->post_type !== 'vendor' ) {
+                return new WP_Error( 'gse_not_found', 'Vendor not found', array( 'status' => 404 ) );
+            }
+
+            if ( ! function_exists( 'wp_delete_post' ) ) {
+                return new WP_Error( 'gse_dependency_missing', 'WordPress functions unavailable', array( 'status' => 500 ) );
+            }
+
+            $result = wp_delete_post( $post_id, (bool) $force_delete );
+            if ( ! $result ) {
+                return new WP_Error( 'gse_delete_failed', 'Failed to delete vendor', array( 'status' => 500 ) );
+            }
+
+            // Best-effort cleanup of membership rows in custom table.
+            global $wpdb;
+            if ( isset( $wpdb ) && is_object( $wpdb ) ) {
+                $table_name = isset( $wpdb->prefix ) ? $wpdb->prefix . 'gse_vendor_user_roles' : 'wp_gse_vendor_user_roles';
+                if ( method_exists( $wpdb, 'delete' ) ) {
+                    $wpdb->delete( $table_name, array( 'vendor_id' => $post_id ), array( '%d' ) );
+                } elseif ( method_exists( $wpdb, 'prepare' ) && method_exists( $wpdb, 'query' ) ) {
+                    $sql = $wpdb->prepare( "DELETE FROM {$table_name} WHERE vendor_id = %d", $post_id );
+                    $wpdb->query( $sql );
+                }
+            }
+
+            return array( 'deleted' => true, 'id' => $post_id );
+        }
+
         public function get_basic_info_summary() {
             return array(
                 'meta' => $this->meta,

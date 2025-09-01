@@ -198,6 +198,56 @@ if ( ! function_exists( 'gse_vendors_register_rest_routes' ) ) {
             },
         ) );
 
+        // Custom route: delete vendor
+        register_rest_route( 'gse/v1', '/vendors/(?P<id>\\d+)', array(
+            'methods' => 'DELETE',
+            'permission_callback' => function ( $request ) {
+                $post_id = isset( $request['id'] ) ? (int) $request['id'] : 0;
+                if ( $post_id <= 0 ) {
+                    return new WP_Error( 'gse_invalid_id', 'Invalid vendor id', array( 'status' => 400 ) );
+                }
+                if ( current_user_can( 'administrator' ) ) {
+                    return true;
+                }
+                if ( get_current_user_id() && gse_vendors_user_can_vendor( get_current_user_id(), $post_id, 'can_delete_vendor' ) ) {
+                    return true;
+                }
+                return new WP_Error( 'gse_forbidden', 'Forbidden', array( 'status' => 403 ) );
+            },
+            'args' => array(
+                'id' => array(
+                    'type' => 'integer',
+                    'required' => true,
+                    'minimum' => 1,
+                ),
+                'force' => array(
+                    'type' => 'boolean',
+                    'required' => false,
+                    'default' => true,
+                ),
+            ),
+            'callback' => function ( $request ) {
+                if ( ! class_exists( 'GSE_Vendor' ) ) {
+                    return new WP_Error( 'gse_dependency_missing', 'Vendor model unavailable', array( 'status' => 500 ) );
+                }
+
+                $post_id = isset( $request['id'] ) ? (int) $request['id'] : 0;
+                $force = isset( $request['force'] ) ? (bool) $request['force'] : true;
+
+                // Ensure exists before attempting delete
+                $post = get_post( $post_id );
+                if ( ! $post || ! isset( $post->post_type ) || $post->post_type !== 'vendor' ) {
+                    return new WP_Error( 'gse_not_found', 'Vendor not found', array( 'status' => 404 ) );
+                }
+
+                $result = GSE_Vendor::delete( $post_id, $force );
+                if ( is_wp_error( $result ) ) {
+                    return $result;
+                }
+                return $result; // { deleted: true, id }
+            },
+        ) );
+
         // Custom route: search vendors
         register_rest_route( 'gse/v1', '/vendors/search', array(
             'methods' => 'GET',
