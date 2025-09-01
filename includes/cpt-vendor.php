@@ -37,7 +37,7 @@ if ( ! function_exists( 'gse_vendors_register_cpt' ) ) {
         );
 
         if ( function_exists( 'register_post_type' ) ) {
-            call_user_func( 'register_post_type', 'vendor', $args );
+            register_post_type( 'vendor', $args );
         }
     }
 }

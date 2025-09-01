@@ -52,19 +52,14 @@ if ( ! function_exists( 'gse_vendors_seed_owner' ) ) {
 }
 
 // Hook on publish of vendor posts to seed owner if missing.
-if ( function_exists( 'add_action' ) ) {
-    call_user_func( 'add_action', 'publish_vendor', 'gse_vendors_seed_owner', 10, 2 );
-}
+add_action( 'publish_vendor', 'gse_vendors_seed_owner', 10, 2 );
 
 
 // Internal role catalog (filterable)
 if ( ! function_exists( 'gse_vendors_get_role_catalog' ) ) {
     function gse_vendors_get_role_catalog() {
         $roles = array( 'owner', 'manager', 'editor', 'viewer' );
-        if ( function_exists( 'apply_filters' ) ) {
-            return (array) call_user_func( 'apply_filters', 'gse_vendors_role_catalog', $roles );
-        }
-        return $roles;
+        return (array) apply_filters( 'gse_vendors_role_catalog', $roles );
     }
 }
 
@@ -94,10 +89,7 @@ if ( ! function_exists( 'gse_vendors_get_capability_matrix' ) ) {
             ),
         );
 
-        if ( function_exists( 'apply_filters' ) ) {
-            return (array) call_user_func( 'apply_filters', 'gse_vendors_capability_matrix', $matrix );
-        }
-        return $matrix;
+        return (array) apply_filters( 'gse_vendors_capability_matrix', $matrix );
     }
 }
 
@@ -113,10 +105,8 @@ if ( ! function_exists( 'gse_vendors_user_can_vendor' ) ) {
         }
 
         // Admins always allowed.
-        if ( function_exists( 'user_can' ) ) {
-            if ( call_user_func( 'user_can', $user_id, 'administrator' ) ) {
-                return true;
-            }
+        if ( user_can( $user_id, 'administrator' ) ) {
+            return true;
         }
 
         // Look up membership role.

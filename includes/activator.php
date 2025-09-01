@@ -32,7 +32,7 @@ if ( ! function_exists( 'gse_vendors_activate' ) ) {
         ) {$charset_collate};";
 
         if ( function_exists( 'dbDelta' ) ) {
-            call_user_func( 'dbDelta', $sql );
+            dbDelta( $sql );
         }
     }
 }
