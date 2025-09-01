@@ -88,16 +88,18 @@ add_action( 'init', function () {
         gse_vendors_register_meta();
     }
 
+    if ( function_exists( 'gse_vendors_admin_boot' ) ) {
+        gse_vendors_admin_boot();
+    }
+});
+
+add_action( 'rest_api_init', function () {
     if ( function_exists( 'gse_vendors_register_rest_routes' ) ) {
         gse_vendors_register_rest_routes();
     }
 
     if ( function_exists( 'gse_vendors_register_members_rest_routes' ) ) {
         gse_vendors_register_members_rest_routes();
-    }
-
-    if ( function_exists( 'gse_vendors_admin_boot' ) ) {
-        gse_vendors_admin_boot();
     }
 });
 
