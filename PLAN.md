@@ -59,10 +59,10 @@
 * [x] **Custom route: vendor GET** `GET /gse/v1/vendors/{id}`
 
   * [x] Return vendor with meta, tax, featured media URL, `basic_info_summary`.
-* [ ] **Custom route: vendor CREATE** `POST /gse/v1/vendors`
+* [x] **Custom route: vendor CREATE** `POST /gse/v1/vendors`
 
-  * [ ] Body: title, status (default `publish`), meta fields, taxonomy IDs.
-  * [ ] **Permission**: `user_can_vendor(..., 'can_create_vendor')` OR site admin.
+  * [x] Body: title, status (default `publish`), meta fields, taxonomy IDs.
+  * [x] **Permission**: `user_can_vendor(..., 'can_create_vendor')` OR site admin.
 * [ ] **Custom route: vendor UPDATE** `PATCH /gse/v1/vendors/{id}`
 
   * [ ] Body: partial updates for title/meta/tax.

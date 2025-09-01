@@ -57,6 +57,104 @@ if ( ! class_exists( 'GSE_Vendor' ) ) {
             return self::load( $post_id, $require_published );
         }
 
+        /**
+         * Create a new Vendor post with optional meta and tax terms.
+         *
+         * @param array $args { title (string, required), status (string), meta (array), locations (array), certifications (array) }
+         * @return GSE_Vendor|WP_Error|null
+         */
+        public static function create( $args ) {
+            $title = isset( $args['title'] ) ? (string) $args['title'] : '';
+            if ( $title === '' ) {
+                if ( class_exists( 'WP_Error' ) ) {
+                    $wp_error_class = 'WP_Error';
+                    return new $wp_error_class( 'gse_validation_error', 'Title is required', array( 'status' => 422 ) );
+                }
+                return null;
+            }
+
+            $status = isset( $args['status'] ) ? (string) $args['status'] : 'publish';
+            $status = in_array( $status, array( 'publish', 'draft', 'pending' ), true ) ? $status : 'publish';
+
+            if ( ! function_exists( 'wp_insert_post' ) ) {
+                if ( class_exists( 'WP_Error' ) ) {
+                    $wp_error_class = 'WP_Error';
+                    return new $wp_error_class( 'gse_dependency_missing', 'WordPress functions unavailable', array( 'status' => 500 ) );
+                }
+                return null;
+            }
+
+            $postarr = array(
+                'post_type' => 'vendor',
+                'post_status' => $status,
+                'post_title' => $title,
+            );
+
+            $post_id = call_user_func( 'wp_insert_post', $postarr, true );
+            if ( function_exists( 'is_wp_error' ) && call_user_func( 'is_wp_error', $post_id ) ) {
+                return $post_id;
+            }
+
+            $post_id = (int) $post_id;
+            if ( $post_id <= 0 ) {
+                if ( class_exists( 'WP_Error' ) ) {
+                    $wp_error_class = 'WP_Error';
+                    return new $wp_error_class( 'gse_create_failed', 'Failed to create vendor', array( 'status' => 500 ) );
+                }
+                return null;
+            }
+
+            // Meta
+            $meta = isset( $args['meta'] ) && is_array( $args['meta'] ) ? $args['meta'] : array();
+            $hq = isset( $meta['headquarters'] ) ? (string) $meta['headquarters'] : '';
+            $years = isset( $meta['years_in_operation'] ) ? $meta['years_in_operation'] : 0;
+            $url = isset( $meta['website_url'] ) ? (string) $meta['website_url'] : '';
+            $contact = isset( $meta['contact'] ) && is_array( $meta['contact'] ) ? $meta['contact'] : array();
+
+            if ( function_exists( 'gse_vendors_sanitize_text_meta' ) ) {
+                $hq = call_user_func( 'gse_vendors_sanitize_text_meta', $hq );
+            }
+            if ( function_exists( 'gse_vendors_sanitize_absint_meta' ) ) {
+                $years = call_user_func( 'gse_vendors_sanitize_absint_meta', $years );
+            } else {
+                $years = is_numeric( $years ) ? (int) $years : 0;
+            }
+            if ( function_exists( 'gse_vendors_sanitize_url_meta' ) ) {
+                $url = call_user_func( 'gse_vendors_sanitize_url_meta', $url );
+            }
+            if ( function_exists( 'gse_vendors_sanitize_contact_meta' ) ) {
+                $contact = call_user_func( 'gse_vendors_sanitize_contact_meta', $contact );
+            } else {
+                $contact = array();
+            }
+
+            if ( function_exists( 'update_post_meta' ) ) {
+                call_user_func( 'update_post_meta', $post_id, 'headquarters', $hq );
+                call_user_func( 'update_post_meta', $post_id, 'years_in_operation', $years );
+                call_user_func( 'update_post_meta', $post_id, 'website_url', $url );
+                call_user_func( 'update_post_meta', $post_id, 'contact', $contact );
+            }
+
+            // Taxonomies
+            $locations = isset( $args['locations'] ) && is_array( $args['locations'] ) ? $args['locations'] : array();
+            $certifications = isset( $args['certifications'] ) && is_array( $args['certifications'] ) ? $args['certifications'] : array();
+
+            if ( function_exists( 'wp_set_object_terms' ) ) {
+                if ( ! empty( $locations ) ) {
+                    $loc_ids = array();
+                    foreach ( $locations as $t ) { $loc_ids[] = (int) $t; }
+                    call_user_func( 'wp_set_object_terms', $post_id, $loc_ids, 'gse_location', false );
+                }
+                if ( ! empty( $certifications ) ) {
+                    $cert_ids = array();
+                    foreach ( $certifications as $t ) { $cert_ids[] = (int) $t; }
+                    call_user_func( 'wp_set_object_terms', $post_id, $cert_ids, 'gse_certification', false );
+                }
+            }
+
+            return self::getById( $post_id, false );
+        }
+
         public function get_basic_info_summary() {
             return array(
                 'meta' => $this->meta,

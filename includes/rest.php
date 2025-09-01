@@ -100,6 +100,74 @@ if ( ! function_exists( 'gse_vendors_register_rest_routes' ) ) {
             },
         ) );
 
+        // Custom route: create vendor
+        call_user_func( 'register_rest_route', 'gse/v1', '/vendors', array(
+            'methods' => 'POST',
+            'permission_callback' => function () {
+                if ( function_exists( 'current_user_can' ) && call_user_func( 'current_user_can', 'administrator' ) ) {
+                    return true;
+                }
+                if ( class_exists( 'WP_Error' ) ) {
+                    $wp_error_class = 'WP_Error';
+                    return new $wp_error_class( 'gse_forbidden', 'Forbidden', array( 'status' => 403 ) );
+                }
+                return false;
+            },
+            'args' => array(
+                'title' => array(
+                    'type' => 'string',
+                    'required' => true,
+                ),
+                'status' => array(
+                    'type' => 'string',
+                    'required' => false,
+                    'default' => 'publish',
+                ),
+                'meta' => array(
+                    'type' => 'object',
+                    'required' => false,
+                ),
+                'locations' => array(
+                    'type' => 'array',
+                    'required' => false,
+                ),
+                'certifications' => array(
+                    'type' => 'array',
+                    'required' => false,
+                ),
+            ),
+            'callback' => function ( $request ) {
+                if ( ! class_exists( 'GSE_Vendor' ) ) {
+                    if ( class_exists( 'WP_Error' ) ) {
+                        $wp_error_class = 'WP_Error';
+                        return new $wp_error_class( 'gse_dependency_missing', 'Vendor model unavailable', array( 'status' => 500 ) );
+                    }
+                    return array( 'error' => 'Vendor model unavailable', 'status' => 500 );
+                }
+
+                $args = array(
+                    'title' => isset( $request['title'] ) ? (string) $request['title'] : '',
+                    'status' => isset( $request['status'] ) ? (string) $request['status'] : 'publish',
+                    'meta' => isset( $request['meta'] ) && is_array( $request['meta'] ) ? $request['meta'] : array(),
+                    'locations' => isset( $request['locations'] ) && is_array( $request['locations'] ) ? $request['locations'] : array(),
+                    'certifications' => isset( $request['certifications'] ) && is_array( $request['certifications'] ) ? $request['certifications'] : array(),
+                );
+
+                $vendor = GSE_Vendor::create( $args );
+                if ( is_object( $vendor ) && isset( $vendor->id ) ) {
+                    return $vendor->to_array();
+                }
+                if ( class_exists( 'WP_Error' ) && function_exists( 'is_wp_error' ) && call_user_func( 'is_wp_error', $vendor ) ) {
+                    return $vendor;
+                }
+                if ( class_exists( 'WP_Error' ) ) {
+                    $wp_error_class = 'WP_Error';
+                    return new $wp_error_class( 'gse_create_failed', 'Failed to create vendor', array( 'status' => 500 ) );
+                }
+                return array( 'error' => 'Failed to create vendor', 'status' => 500 );
+            },
+        ) );
+
         // Custom route: search vendors
         call_user_func( 'register_rest_route', 'gse/v1', '/vendors/search', array(
             'methods' => 'GET',
