@@ -67,11 +67,11 @@
 
   * [x] Body: partial updates for title/meta/tax.
   * [x] **Permission**: `user_can_vendor(user, vendor, 'can_edit_basic')` OR site admin.
-* [ ] **Custom route: vendor DELETE** `DELETE /gse/v1/vendors/{id}`
+* [x] **Custom route: vendor DELETE** `DELETE /gse/v1/vendors/{id}`
 
-  * [ ] **Permission**: `user_can_vendor(user, vendor, 'can_delete_vendor')` OR site admin.
-* [ ] **Error semantics**: 403 (forbidden), 404 (missing vendor), 409 (conflicts), 422 (validation).
-* [ ] **Schema docs**: attach argument schemas to routes (types, formats).
+  * [x] **Permission**: `user_can_vendor(user, vendor, 'can_delete_vendor')` OR site admin.
+* [x] **Error semantics**: 403 (forbidden), 404 (missing vendor), 409 (conflicts), 422 (validation).
+* [x] **Schema docs**: attach argument schemas to routes (types, formats).
 
 ---
 
