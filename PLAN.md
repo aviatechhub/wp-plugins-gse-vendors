@@ -81,16 +81,19 @@
 
   * [x] Returns: `{ user_id, display_name, email, role, assigned_at }[]`.
   * [x] **Permission**: owner/manager or admin; viewers/editors may be denied or given subset (configurable).
-* [ ] **Add/Invite member** `POST /gse/v1/vendors/{id}/members`
 
-  * [ ] Body: `user_id`, `role`.
-  * [ ] Enforce unique `(vendor_id, user_id)`.
-  * [ ] **Permission**: owner/manager; only owner may create another owner.
+* [x] **Add member** `POST /gse/v1/vendors/{id}/members`
+  * [x] Create a WP User
+  * [x] Body: `role`, `email`, `display_name`, `password`.
+  * [x] Enforce unique `email`.
+  * [x] **Permission**: owner/manager; only owner may create another owner.
+
 * [ ] **Update member role** `PATCH /gse/v1/vendors/{id}/members/{user_id}`
 
   * [ ] Body: `role`.
   * [ ] Prevent demoting last owner.
   * [ ] **Permission**: owner (for owner promotions/demotions); manager for non-owner changes.
+
 * [ ] **Remove member** `DELETE /gse/v1/vendors/{id}/members/{user_id}`
 
   * [ ] Prevent removing last owner.

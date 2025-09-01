@@ -265,6 +265,144 @@ if ( ! class_exists( 'GSE_Vendor' ) ) {
         }
 
         /**
+         * Add a member to a vendor, optionally creating the WP User by email.
+         *
+         * @param int   $post_id Vendor post ID
+         * @param array $args { role (string, required), email (string, required), display_name (string), password (string) }
+         * @return array|WP_Error { user_id, display_name, email, role, assigned_at } or WP_Error
+         */
+        public static function add_member( $post_id, $args ) {
+            $post_id = (int) $post_id;
+            if ( $post_id <= 0 ) {
+                return new WP_Error( 'gse_invalid_id', 'Invalid vendor id', array( 'status' => 400 ) );
+            }
+
+            $post = get_post( $post_id );
+            if ( ! $post || ! isset( $post->post_type ) || $post->post_type !== 'vendor' ) {
+                return new WP_Error( 'gse_not_found', 'Vendor not found', array( 'status' => 404 ) );
+            }
+
+            $role = isset( $args['role'] ) ? (string) $args['role'] : '';
+            $email = isset( $args['email'] ) ? (string) $args['email'] : '';
+            $display_name = isset( $args['display_name'] ) ? (string) $args['display_name'] : '';
+            $password = isset( $args['password'] ) ? (string) $args['password'] : '';
+
+            // Validate role
+            $catalog = gse_vendors_get_role_catalog();
+            if ( ! in_array( $role, (array) $catalog, true ) ) {
+                return new WP_Error( 'gse_validation_error', 'Invalid role', array( 'status' => 422 ) );
+            }
+            if ( $role === '' ) {
+                return new WP_Error( 'gse_validation_error', 'Invalid role', array( 'status' => 422 ) );
+            }
+
+            // Validate email
+            if ( $email === '' || ! is_email( $email ) ) {
+                return new WP_Error( 'gse_validation_error', 'A valid email is required', array( 'status' => 422 ) );
+            }
+
+            // Get or create user by email
+            $user_id = 0;
+            $user = get_user_by( 'email', $email );
+            if ( $user && isset( $user->ID ) ) {
+                $user_id = (int) $user->ID;
+            }
+
+            if ( $user_id <= 0 ) {
+                if ( $password === '' ) {
+                    return new WP_Error( 'gse_validation_error', 'Password is required to create a new user', array( 'status' => 422 ) );
+                }
+
+                // Derive a user_login from email
+                $login_base = $email;
+                if ( function_exists( 'sanitize_user' ) ) {
+                    $at_pos = strpos( $email, '@' );
+                    $login_candidate = $at_pos !== false ? substr( $email, 0, $at_pos ) : $email;
+                    $login_base = sanitize_user( $login_candidate, true );
+                    if ( $login_base === '' ) {
+                        $login_base = preg_replace( '/[^a-z0-9_\-]/i', '', $login_candidate );
+                    }
+                }
+
+                $user_login = $login_base !== '' ? $login_base : $email;
+                if ( username_exists( $user_login ) ) {
+                    $user_login = $user_login . '_' . substr( md5( $email ), 0, 6 );
+                }
+
+                $user_data = array(
+                    'user_login' => $user_login,
+                    'user_email' => $email,
+                    'user_pass' => $password,
+                );
+                if ( $display_name !== '' ) {
+                    $user_data['display_name'] = $display_name;
+                }
+
+                $created = wp_insert_user( $user_data );
+                if ( is_wp_error( $created ) ) {
+                    return new WP_Error( 'gse_create_failed', 'Failed to create user', array( 'status' => 500, 'data' => $created->get_error_message() ) );
+                }
+                $user_id = (int) $created;
+            }
+
+            // Ensure not already a member
+            global $wpdb;
+            if ( ! isset( $wpdb ) || ! is_object( $wpdb ) ) {
+                return new WP_Error( 'gse_dependency_missing', 'Database unavailable', array( 'status' => 500 ) );
+            }
+
+            $table_members = isset( $wpdb->prefix ) ? $wpdb->prefix . 'gse_vendor_user_roles' : 'wp_gse_vendor_user_roles';
+            $existing_count = 0;
+            if ( method_exists( $wpdb, 'prepare' ) && method_exists( $wpdb, 'get_var' ) ) {
+                $sql = $wpdb->prepare( "SELECT COUNT(*) FROM {$table_members} WHERE vendor_id = %d AND user_id = %d", $post_id, $user_id );
+                $existing_count = (int) $wpdb->get_var( $sql );
+            }
+            if ( $existing_count > 0 ) {
+                return new WP_Error( 'gse_conflict', 'User is already a member of this vendor', array( 'status' => 409 ) );
+            }
+
+            // Insert membership
+            $now_gmt = gmdate( 'Y-m-d H:i:s' );
+            $inserted = false;
+            if ( method_exists( $wpdb, 'insert' ) ) {
+                $inserted = (bool) $wpdb->insert(
+                    $table_members,
+                    array(
+                        'vendor_id' => $post_id,
+                        'user_id' => $user_id,
+                        'role' => $role,
+                        'assigned_at' => $now_gmt,
+                    ),
+                    array( '%d', '%d', '%s', '%s' )
+                );
+            }
+
+            if ( ! $inserted ) {
+                return new WP_Error( 'gse_create_failed', 'Failed to add member', array( 'status' => 500 ) );
+            }
+
+            // Build response
+            $user_display_name = $display_name;
+            if ( $user_display_name === '' ) {
+                $wp_user = get_user_by( 'id', $user_id );
+                if ( $wp_user && isset( $wp_user->display_name ) ) {
+                    $user_display_name = (string) $wp_user->display_name;
+                }
+                if ( $email === '' && isset( $wp_user->user_email ) ) {
+                    $email = (string) $wp_user->user_email;
+                }
+            }
+
+            return array(
+                'user_id' => $user_id,
+                'display_name' => $user_display_name,
+                'email' => $email,
+                'role' => $role,
+                'assigned_at' => $now_gmt,
+            );
+        }
+
+        /**
          * Delete a Vendor post and clean up related membership rows.
          *
          * @param int  $post_id       Vendor post ID

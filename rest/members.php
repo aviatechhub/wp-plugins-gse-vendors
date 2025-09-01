@@ -60,6 +60,99 @@ if ( ! function_exists( 'gse_vendors_register_members_rest_routes' ) ) {
                 return array( 'items' => $members );
             },
         ) );
+
+        // Add member: POST /gse/v1/vendors/{id}/members
+        register_rest_route( 'gse/v1', '/vendors/(?P<id>\\d+)/members', array(
+            'methods' => 'POST',
+            'permission_callback' => function ( $request ) {
+                $post_id = isset( $request['id'] ) ? (int) $request['id'] : 0;
+                if ( $post_id <= 0 ) {
+                    return new WP_Error( 'gse_invalid_id', 'Invalid vendor id', array( 'status' => 400 ) );
+                }
+
+                // Admins allowed
+                if ( current_user_can( 'administrator' ) ) {
+                    return true;
+                }
+
+                $current_user_id = (int) get_current_user_id();
+                if ( $current_user_id <= 0 ) {
+                    return new WP_Error( 'gse_forbidden', 'Forbidden', array( 'status' => 403 ) );
+                }
+
+                // Must be able to manage members at minimum.
+                if ( ! gse_vendors_user_can_vendor( $current_user_id, $post_id, 'can_manage_members' ) ) {
+                    return new WP_Error( 'gse_forbidden', 'Forbidden', array( 'status' => 403 ) );
+                }
+
+                // If creating another owner, only owners may do so.
+                $requested_role = isset( $request['role'] ) ? (string) $request['role'] : '';
+                if ( $requested_role === 'owner' ) {
+                    // Look up the caller's role for this vendor
+                    global $wpdb;
+                    $caller_role = '';
+                    if ( isset( $wpdb ) && is_object( $wpdb ) && method_exists( $wpdb, 'prepare' ) && method_exists( $wpdb, 'get_var' ) ) {
+                        $table_name = isset( $wpdb->prefix ) ? $wpdb->prefix . 'gse_vendor_user_roles' : 'wp_gse_vendor_user_roles';
+                        $sql = $wpdb->prepare( "SELECT role FROM {$table_name} WHERE vendor_id = %d AND user_id = %d LIMIT 1", $post_id, $current_user_id );
+                        $caller_role = (string) $wpdb->get_var( $sql );
+                    }
+                    if ( $caller_role !== 'owner' ) {
+                        return new WP_Error( 'gse_forbidden', 'Only an owner can assign the owner role', array( 'status' => 403 ) );
+                    }
+                }
+
+                return true;
+            },
+            'args' => array(
+                'id' => array(
+                    'type' => 'integer',
+                    'required' => true,
+                    'minimum' => 1,
+                ),
+                'role' => array(
+                    'type' => 'string',
+                    'required' => true,
+                ),
+                'email' => array(
+                    'type' => 'string',
+                    'format' => 'email',
+                    'required' => true,
+                ),
+                'display_name' => array(
+                    'type' => 'string',
+                    'required' => false,
+                ),
+                'password' => array(
+                    'type' => 'string',
+                    'required' => false,
+                ),
+            ),
+            'callback' => function ( $request ) {
+                $post_id = isset( $request['id'] ) ? (int) $request['id'] : 0;
+                $role = isset( $request['role'] ) ? (string) $request['role'] : '';
+                $email = isset( $request['email'] ) ? (string) $request['email'] : '';
+                $display_name = isset( $request['display_name'] ) ? (string) $request['display_name'] : '';
+                $password = isset( $request['password'] ) ? (string) $request['password'] : '';
+
+                // Validate email when WordPress helper not available
+                if ( $email === '' ) {
+                    return new WP_Error( 'gse_validation_error', 'Email is required', array( 'status' => 422 ) );
+                }
+
+                $result = GSE_Vendor::add_member( $post_id, array(
+                    'role' => $role,
+                    'email' => $email,
+                    'display_name' => $display_name,
+                    'password' => $password,
+                ) );
+
+                if ( is_wp_error( $result ) ) {
+                    return $result;
+                }
+
+                return $result;
+            },
+        ) );
     }
 }
 
