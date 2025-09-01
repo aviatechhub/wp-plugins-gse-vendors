@@ -33,6 +33,7 @@ if ( ! defined( 'GSE_VENDORS_URL' ) ) {
 
 // Include plugin components from the includes directory if present.
 $gse_vendors_includes_dir = __DIR__ . '/includes/';
+$gse_vendors_rest_dir = __DIR__ . '/rest/';
 
 $gse_vendors_files = array(
     // Custom Post Type and Taxonomies.
@@ -44,9 +45,6 @@ $gse_vendors_files = array(
 
 	// Domain models
 	'models/class-vendor.php',
-
-    // REST endpoints.
-    'rest.php',
 
     // WP Admin UI.
     'admin.php',
@@ -65,6 +63,18 @@ foreach ( $gse_vendors_files as $gse_vendors_file ) {
     }
 }
 
+// Load REST files from /rest if present.
+$gse_vendors_rest_files = array(
+    'vendors.php',
+    'members.php',
+);
+foreach ( $gse_vendors_rest_files as $gse_vendors_rest_file ) {
+    $gse_vendors_rest_path = $gse_vendors_rest_dir . $gse_vendors_rest_file;
+    if ( file_exists( $gse_vendors_rest_path ) ) {
+        require_once $gse_vendors_rest_path;
+    }
+}
+
 
 // Register hooks.
 add_action( 'init', function () {
@@ -80,6 +90,10 @@ add_action( 'init', function () {
 
     if ( function_exists( 'gse_vendors_register_rest_routes' ) ) {
         gse_vendors_register_rest_routes();
+    }
+
+    if ( function_exists( 'gse_vendors_register_members_rest_routes' ) ) {
+        gse_vendors_register_members_rest_routes();
     }
 
     if ( function_exists( 'gse_vendors_admin_boot' ) ) {
