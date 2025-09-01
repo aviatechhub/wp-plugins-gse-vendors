@@ -63,10 +63,10 @@
 
   * [x] Body: title, status (default `publish`), meta fields, taxonomy IDs.
   * [x] **Permission**: `user_can_vendor(..., 'can_create_vendor')` OR site admin.
-* [ ] **Custom route: vendor UPDATE** `PATCH /gse/v1/vendors/{id}`
+* [x] **Custom route: vendor UPDATE** `PATCH /gse/v1/vendors/{id}`
 
-  * [ ] Body: partial updates for title/meta/tax.
-  * [ ] **Permission**: `user_can_vendor(user, vendor, 'can_edit_basic')` OR site admin.
+  * [x] Body: partial updates for title/meta/tax.
+  * [x] **Permission**: `user_can_vendor(user, vendor, 'can_edit_basic')` OR site admin.
 * [ ] **Custom route: vendor DELETE** `DELETE /gse/v1/vendors/{id}`
 
   * [ ] **Permission**: `user_can_vendor(user, vendor, 'can_delete_vendor')` OR site admin.

@@ -168,6 +168,92 @@ if ( ! function_exists( 'gse_vendors_register_rest_routes' ) ) {
             },
         ) );
 
+        // Custom route: update vendor
+        call_user_func( 'register_rest_route', 'gse/v1', '/vendors/(?P<id>\\d+)', array(
+            'methods' => 'PATCH',
+            'permission_callback' => function ( $request ) {
+                $post_id = isset( $request['id'] ) ? (int) $request['id'] : 0;
+                if ( $post_id <= 0 ) {
+                    if ( class_exists( 'WP_Error' ) ) {
+                        $wp_error_class = 'WP_Error';
+                        return new $wp_error_class( 'gse_invalid_id', 'Invalid vendor id', array( 'status' => 400 ) );
+                    }
+                    return false;
+                }
+                // Admins allowed; otherwise require capability via role system
+                if ( function_exists( 'current_user_can' ) && call_user_func( 'current_user_can', 'administrator' ) ) {
+                    return true;
+                }
+                if ( function_exists( 'get_current_user_id' ) && function_exists( 'gse_vendors_user_can_vendor' ) ) {
+                    $uid = call_user_func( 'get_current_user_id' );
+                    return (bool) call_user_func( 'gse_vendors_user_can_vendor', $uid, $post_id, 'can_edit_basic' );
+                }
+                if ( class_exists( 'WP_Error' ) ) {
+                    $wp_error_class = 'WP_Error';
+                    return new $wp_error_class( 'gse_forbidden', 'Forbidden', array( 'status' => 403 ) );
+                }
+                return false;
+            },
+            'args' => array(
+                'id' => array(
+                    'type' => 'integer',
+                    'required' => true,
+                    'minimum' => 1,
+                ),
+                'title' => array(
+                    'type' => 'string',
+                    'required' => false,
+                ),
+                'status' => array(
+                    'type' => 'string',
+                    'required' => false,
+                ),
+                'meta' => array(
+                    'type' => 'object',
+                    'required' => false,
+                ),
+                'locations' => array(
+                    'type' => 'array',
+                    'required' => false,
+                ),
+                'certifications' => array(
+                    'type' => 'array',
+                    'required' => false,
+                ),
+            ),
+            'callback' => function ( $request ) {
+                if ( ! class_exists( 'GSE_Vendor' ) ) {
+                    if ( class_exists( 'WP_Error' ) ) {
+                        $wp_error_class = 'WP_Error';
+                        return new $wp_error_class( 'gse_dependency_missing', 'Vendor model unavailable', array( 'status' => 500 ) );
+                    }
+                    return array( 'error' => 'Vendor model unavailable', 'status' => 500 );
+                }
+
+                $post_id = isset( $request['id'] ) ? (int) $request['id'] : 0;
+                $args = array(
+                    'title' => array_key_exists( 'title', $request ) ? (string) $request['title'] : null,
+                    'status' => array_key_exists( 'status', $request ) ? (string) $request['status'] : null,
+                    'meta' => isset( $request['meta'] ) && is_array( $request['meta'] ) ? $request['meta'] : null,
+                    'locations' => isset( $request['locations'] ) && is_array( $request['locations'] ) ? $request['locations'] : null,
+                    'certifications' => isset( $request['certifications'] ) && is_array( $request['certifications'] ) ? $request['certifications'] : null,
+                );
+
+                $vendor = GSE_Vendor::update( $post_id, $args );
+                if ( is_object( $vendor ) && isset( $vendor->id ) ) {
+                    return $vendor->to_array();
+                }
+                if ( class_exists( 'WP_Error' ) && function_exists( 'is_wp_error' ) && call_user_func( 'is_wp_error', $vendor ) ) {
+                    return $vendor;
+                }
+                if ( class_exists( 'WP_Error' ) ) {
+                    $wp_error_class = 'WP_Error';
+                    return new $wp_error_class( 'gse_update_failed', 'Failed to update vendor', array( 'status' => 500 ) );
+                }
+                return array( 'error' => 'Failed to update vendor', 'status' => 500 );
+            },
+        ) );
+
         // Custom route: search vendors
         call_user_func( 'register_rest_route', 'gse/v1', '/vendors/search', array(
             'methods' => 'GET',
