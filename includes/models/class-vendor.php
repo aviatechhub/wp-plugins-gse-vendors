@@ -403,6 +403,123 @@ if ( ! class_exists( 'GSE_Vendor' ) ) {
         }
 
         /**
+         * Update a member's role for a vendor.
+         *
+         * Prevents demoting the last remaining owner.
+         *
+         * @param int    $post_id  Vendor post ID
+         * @param int    $user_id  User ID of the member
+         * @param string $new_role New role (must be in role catalog)
+         * @return array|WP_Error { user_id, display_name, email, role, assigned_at } or WP_Error
+         */
+        public static function update_member_role( $post_id, $user_id, $new_role ) {
+            $post_id = (int) $post_id;
+            $user_id = (int) $user_id;
+            $new_role = (string) $new_role;
+
+            if ( $post_id <= 0 || $user_id <= 0 ) {
+                return new WP_Error( 'gse_invalid_id', 'Invalid vendor or user id', array( 'status' => 400 ) );
+            }
+
+            $post = get_post( $post_id );
+            if ( ! $post || ! isset( $post->post_type ) || $post->post_type !== 'vendor' ) {
+                return new WP_Error( 'gse_not_found', 'Vendor not found', array( 'status' => 404 ) );
+            }
+
+            // Validate role against catalog
+            $catalog = gse_vendors_get_role_catalog();
+            if ( ! in_array( $new_role, (array) $catalog, true ) || $new_role === '' ) {
+                return new WP_Error( 'gse_validation_error', 'Invalid role', array( 'status' => 422 ) );
+            }
+
+            global $wpdb;
+            if ( ! isset( $wpdb ) || ! is_object( $wpdb ) ) {
+                return new WP_Error( 'gse_dependency_missing', 'Database unavailable', array( 'status' => 500 ) );
+            }
+
+            $table_members = isset( $wpdb->prefix ) ? $wpdb->prefix . 'gse_vendor_user_roles' : 'wp_gse_vendor_user_roles';
+
+            // Fetch current membership row
+            $current_role = '';
+            $assigned_at = '';
+            if ( method_exists( $wpdb, 'prepare' ) && method_exists( $wpdb, 'get_row' ) ) {
+                $sql = $wpdb->prepare( "SELECT role, assigned_at FROM {$table_members} WHERE vendor_id = %d AND user_id = %d LIMIT 1", $post_id, $user_id );
+                $row = $wpdb->get_row( $sql, ARRAY_A );
+                if ( is_array( $row ) ) {
+                    $current_role = isset( $row['role'] ) ? (string) $row['role'] : '';
+                    $assigned_at = isset( $row['assigned_at'] ) ? (string) $row['assigned_at'] : '';
+                }
+            }
+
+            if ( $current_role === '' ) {
+                return new WP_Error( 'gse_not_found', 'Membership not found', array( 'status' => 404 ) );
+            }
+
+            // Prevent demoting the last owner
+            if ( $current_role === 'owner' && $new_role !== 'owner' ) {
+                $owner_count = 0;
+                if ( method_exists( $wpdb, 'prepare' ) && method_exists( $wpdb, 'get_var' ) ) {
+                    $sql = $wpdb->prepare( "SELECT COUNT(*) FROM {$table_members} WHERE vendor_id = %d AND role = 'owner'", $post_id );
+                    $owner_count = (int) $wpdb->get_var( $sql );
+                }
+                if ( $owner_count <= 1 ) {
+                    return new WP_Error( 'gse_conflict', 'Cannot demote the last owner', array( 'status' => 409 ) );
+                }
+            }
+
+            // No-op if same role
+            if ( $current_role === $new_role ) {
+                $user_display_name = '';
+                $email = '';
+                $wp_user = get_user_by( 'id', $user_id );
+                if ( $wp_user ) {
+                    $user_display_name = isset( $wp_user->display_name ) ? (string) $wp_user->display_name : '';
+                    $email = isset( $wp_user->user_email ) ? (string) $wp_user->user_email : '';
+                }
+                return array(
+                    'user_id' => $user_id,
+                    'display_name' => $user_display_name,
+                    'email' => $email,
+                    'role' => $current_role,
+                    'assigned_at' => $assigned_at,
+                );
+            }
+
+            // Update role; keep assigned_at unchanged to reflect original membership date
+            $updated = false;
+            if ( method_exists( $wpdb, 'update' ) ) {
+                $updated = (bool) $wpdb->update(
+                    $table_members,
+                    array( 'role' => $new_role ),
+                    array( 'vendor_id' => $post_id, 'user_id' => $user_id ),
+                    array( '%s' ),
+                    array( '%d', '%d' )
+                );
+            }
+
+            if ( ! $updated ) {
+                return new WP_Error( 'gse_update_failed', 'Failed to update member role', array( 'status' => 500 ) );
+            }
+
+            // Load user info for response
+            $user_display_name = '';
+            $email = '';
+            $wp_user = get_user_by( 'id', $user_id );
+            if ( $wp_user ) {
+                $user_display_name = isset( $wp_user->display_name ) ? (string) $wp_user->display_name : '';
+                $email = isset( $wp_user->user_email ) ? (string) $wp_user->user_email : '';
+            }
+
+            return array(
+                'user_id' => $user_id,
+                'display_name' => $user_display_name,
+                'email' => $email,
+                'role' => $new_role,
+                'assigned_at' => $assigned_at,
+            );
+        }
+
+        /**
          * Delete a Vendor post and clean up related membership rows.
          *
          * @param int  $post_id       Vendor post ID

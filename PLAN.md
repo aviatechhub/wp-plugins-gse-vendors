@@ -88,11 +88,11 @@
   * [x] Enforce unique `email`.
   * [x] **Permission**: owner/manager; only owner may create another owner.
 
-* [ ] **Update member role** `PATCH /gse/v1/vendors/{id}/members/{user_id}`
+* [x] **Update member role** `PATCH /gse/v1/vendors/{id}/members/{user_id}`
 
-  * [ ] Body: `role`.
-  * [ ] Prevent demoting last owner.
-  * [ ] **Permission**: owner (for owner promotions/demotions); manager for non-owner changes.
+  * [x] Body: `role`.
+  * [x] Prevent demoting last owner.
+  * [x] **Permission**: owner (for owner promotions/demotions); manager for non-owner changes.
 
 * [ ] **Remove member** `DELETE /gse/v1/vendors/{id}/members/{user_id}`
 

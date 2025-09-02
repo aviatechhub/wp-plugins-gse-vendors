@@ -153,6 +153,79 @@ if ( ! function_exists( 'gse_vendors_register_members_rest_routes' ) ) {
                 return $result;
             },
         ) );
+
+        // Update member role: PATCH /gse/v1/vendors/{id}/members/{user_id}
+        register_rest_route( 'gse/v1', '/vendors/(?P<id>\\d+)/members/(?P<user_id>\\d+)', array(
+            'methods' => 'PATCH',
+            'permission_callback' => function ( $request ) {
+                $post_id = isset( $request['id'] ) ? (int) $request['id'] : 0;
+                $target_user_id = isset( $request['user_id'] ) ? (int) $request['user_id'] : 0;
+                if ( $post_id <= 0 || $target_user_id <= 0 ) {
+                    return new WP_Error( 'gse_invalid_id', 'Invalid vendor or user id', array( 'status' => 400 ) );
+                }
+
+                // Admins always allowed
+                if ( current_user_can( 'administrator' ) ) {
+                    return true;
+                }
+
+                $current_user_id = (int) get_current_user_id();
+                if ( $current_user_id <= 0 ) {
+                    return new WP_Error( 'gse_forbidden', 'Forbidden', array( 'status' => 403 ) );
+                }
+
+                $new_role = isset( $request['role'] ) ? (string) $request['role'] : '';
+                global $wpdb;
+                $table_name = isset( $wpdb->prefix ) ? $wpdb->prefix . 'gse_vendor_user_roles' : 'wp_gse_vendor_user_roles';
+                $caller_role = '';
+                $target_current_role = '';
+                if ( isset( $wpdb ) && is_object( $wpdb ) && method_exists( $wpdb, 'prepare' ) && method_exists( $wpdb, 'get_var' ) ) {
+                    $sql_caller = $wpdb->prepare( "SELECT role FROM {$table_name} WHERE vendor_id = %d AND user_id = %d LIMIT 1", $post_id, $current_user_id );
+                    $caller_role = (string) $wpdb->get_var( $sql_caller );
+                    $sql_target = $wpdb->prepare( "SELECT role FROM {$table_name} WHERE vendor_id = %d AND user_id = %d LIMIT 1", $post_id, $target_user_id );
+                    $target_current_role = (string) $wpdb->get_var( $sql_target );
+                }
+
+                // If promotion to owner or demotion from owner, caller must be owner
+                if ( $new_role === 'owner' || $target_current_role === 'owner' ) {
+                    if ( $caller_role !== 'owner' ) {
+                        return new WP_Error( 'gse_forbidden', 'Only an owner can change ownership roles', array( 'status' => 403 ) );
+                    }
+                    return true;
+                }
+
+                // Managers (and owners) can change non-owner roles
+                if ( gse_vendors_user_can_vendor( $current_user_id, $post_id, 'can_manage_members' ) ) {
+                    return true;
+                }
+
+                return new WP_Error( 'gse_forbidden', 'Forbidden', array( 'status' => 403 ) );
+            },
+            'args' => array(
+                'id' => array(
+                    'type' => 'integer',
+                    'required' => true,
+                    'minimum' => 1,
+                ),
+                'user_id' => array(
+                    'type' => 'integer',
+                    'required' => true,
+                    'minimum' => 1,
+                ),
+                'role' => array(
+                    'type' => 'string',
+                    'required' => true,
+                ),
+            ),
+            'callback' => function ( $request ) {
+                $post_id = isset( $request['id'] ) ? (int) $request['id'] : 0;
+                $user_id = isset( $request['user_id'] ) ? (int) $request['user_id'] : 0;
+                $role = isset( $request['role'] ) ? (string) $request['role'] : '';
+
+                $result = GSE_Vendor::update_member_role( $post_id, $user_id, $role );
+                return $result;
+            },
+        ) );
     }
 }
 
