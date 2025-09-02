@@ -98,9 +98,9 @@
 
   * [x] Prevent removing last owner.
   * [x] **Permission**: owner/manager (subject to rules above).
-* [ ] **Get my role** `GET /gse/v1/vendors/{id}/my-role`
+* [x] **Get my role** `GET /gse/v1/vendors/{id}/my-role`
 
-  * [ ] Returns: `{ role }` or `null`.
+  * [x] Returns: `{ role }` or `null`.
 
 ---
 

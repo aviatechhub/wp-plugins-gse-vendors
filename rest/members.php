@@ -295,6 +295,32 @@ if ( ! function_exists( 'gse_vendors_register_members_rest_routes' ) ) {
                 return $result;
             },
         ) );
+
+        // Get my role: GET /gse/v1/vendors/{id}/my-role
+        register_rest_route( 'gse/v1', '/vendors/(?P<id>\\d+)/my-role', array(
+            'methods' => 'GET',
+            'permission_callback' => function ( $request ) {
+                // Any logged-in user can query their own role; admins allowed. Anonymous gets null.
+                return true;
+            },
+            'args' => array(
+                'id' => array(
+                    'type' => 'integer',
+                    'required' => true,
+                    'minimum' => 1,
+                ),
+            ),
+            'callback' => function ( $request ) {
+                $post_id = isset( $request['id'] ) ? (int) $request['id'] : 0;
+                $user_id = (int) get_current_user_id();
+
+                $role = GSE_Vendor::get_member_role( $post_id, $user_id );
+                if ( is_wp_error( $role ) ) {
+                    return $role;
+                }
+                return array( 'role' => $role );
+            },
+        ) );
     }
 }
 

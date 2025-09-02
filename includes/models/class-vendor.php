@@ -590,6 +590,45 @@ if ( ! class_exists( 'GSE_Vendor' ) ) {
         }
 
         /**
+         * Get a member's role for a vendor.
+         *
+         * @param int $post_id Vendor post ID
+         * @param int $user_id User ID
+         * @return string|null|WP_Error Role string, null if not a member, or WP_Error on invalid vendor
+         */
+        public static function get_member_role( $post_id, $user_id ) {
+            $post_id = (int) $post_id;
+            $user_id = (int) $user_id;
+
+            if ( $post_id <= 0 ) {
+                return new WP_Error( 'gse_invalid_id', 'Invalid vendor id', array( 'status' => 400 ) );
+            }
+
+            $post = get_post( $post_id );
+            if ( ! $post || ! isset( $post->post_type ) || $post->post_type !== 'vendor' ) {
+                return new WP_Error( 'gse_not_found', 'Vendor not found', array( 'status' => 404 ) );
+            }
+
+            if ( $user_id <= 0 ) {
+                return null;
+            }
+
+            global $wpdb;
+            if ( ! isset( $wpdb ) || ! is_object( $wpdb ) ) {
+                return new WP_Error( 'gse_dependency_missing', 'Database unavailable', array( 'status' => 500 ) );
+            }
+
+            $table_members = isset( $wpdb->prefix ) ? $wpdb->prefix . 'gse_vendor_user_roles' : 'wp_gse_vendor_user_roles';
+            $role = '';
+            if ( method_exists( $wpdb, 'prepare' ) && method_exists( $wpdb, 'get_var' ) ) {
+                $sql = $wpdb->prepare( "SELECT role FROM {$table_members} WHERE vendor_id = %d AND user_id = %d LIMIT 1", $post_id, $user_id );
+                $role = (string) $wpdb->get_var( $sql );
+            }
+
+            return $role !== '' ? $role : null;
+        }
+
+        /**
          * Delete a Vendor post and clean up related membership rows.
          *
          * @param int  $post_id       Vendor post ID
