@@ -226,6 +226,75 @@ if ( ! function_exists( 'gse_vendors_register_members_rest_routes' ) ) {
                 return $result;
             },
         ) );
+
+        // Remove member: DELETE /gse/v1/vendors/{id}/members/{user_id}
+        register_rest_route( 'gse/v1', '/vendors/(?P<id>\\d+)/members/(?P<user_id>\\d+)', array(
+            'methods' => 'DELETE',
+            'permission_callback' => function ( $request ) {
+                $post_id = isset( $request['id'] ) ? (int) $request['id'] : 0;
+                $target_user_id = isset( $request['user_id'] ) ? (int) $request['user_id'] : 0;
+                if ( $post_id <= 0 || $target_user_id <= 0 ) {
+                    return new WP_Error( 'gse_invalid_id', 'Invalid vendor or user id', array( 'status' => 400 ) );
+                }
+
+                // Admins always allowed
+                if ( current_user_can( 'administrator' ) ) {
+                    return true;
+                }
+
+                $current_user_id = (int) get_current_user_id();
+                if ( $current_user_id <= 0 ) {
+                    return new WP_Error( 'gse_forbidden', 'Forbidden', array( 'status' => 403 ) );
+                }
+
+                // Retrieve target's current role
+                global $wpdb;
+                $target_role = '';
+                $caller_role = '';
+                if ( isset( $wpdb ) && is_object( $wpdb ) && method_exists( $wpdb, 'prepare' ) && method_exists( $wpdb, 'get_var' ) ) {
+                    $table_name = isset( $wpdb->prefix ) ? $wpdb->prefix . 'gse_vendor_user_roles' : 'wp_gse_vendor_user_roles';
+                    $sql_target = $wpdb->prepare( "SELECT role FROM {$table_name} WHERE vendor_id = %d AND user_id = %d LIMIT 1", $post_id, $target_user_id );
+                    $target_role = (string) $wpdb->get_var( $sql_target );
+                    $sql_caller = $wpdb->prepare( "SELECT role FROM {$table_name} WHERE vendor_id = %d AND user_id = %d LIMIT 1", $post_id, $current_user_id );
+                    $caller_role = (string) $wpdb->get_var( $sql_caller );
+                }
+
+                if ( $target_role === '' ) {
+                    return new WP_Error( 'gse_not_found', 'Membership not found', array( 'status' => 404 ) );
+                }
+
+                // If target is owner, only an owner can remove; last-owner guard enforced in model
+                if ( $target_role === 'owner' && $caller_role !== 'owner' ) {
+                    return new WP_Error( 'gse_forbidden', 'Only an owner can remove an owner', array( 'status' => 403 ) );
+                }
+
+                // Otherwise require can_manage_members
+                if ( ! gse_vendors_user_can_vendor( $current_user_id, $post_id, 'can_manage_members' ) ) {
+                    return new WP_Error( 'gse_forbidden', 'Forbidden', array( 'status' => 403 ) );
+                }
+
+                return true;
+            },
+            'args' => array(
+                'id' => array(
+                    'type' => 'integer',
+                    'required' => true,
+                    'minimum' => 1,
+                ),
+                'user_id' => array(
+                    'type' => 'integer',
+                    'required' => true,
+                    'minimum' => 1,
+                ),
+            ),
+            'callback' => function ( $request ) {
+                $post_id = isset( $request['id'] ) ? (int) $request['id'] : 0;
+                $user_id = isset( $request['user_id'] ) ? (int) $request['user_id'] : 0;
+
+                $result = GSE_Vendor::remove_member( $post_id, $user_id );
+                return $result;
+            },
+        ) );
     }
 }
 

@@ -94,10 +94,10 @@
   * [x] Prevent demoting last owner.
   * [x] **Permission**: owner (for owner promotions/demotions); manager for non-owner changes.
 
-* [ ] **Remove member** `DELETE /gse/v1/vendors/{id}/members/{user_id}`
+* [x] **Remove member** `DELETE /gse/v1/vendors/{id}/members/{user_id}`
 
-  * [ ] Prevent removing last owner.
-  * [ ] **Permission**: owner/manager (subject to rules above).
+  * [x] Prevent removing last owner.
+  * [x] **Permission**: owner/manager (subject to rules above).
 * [ ] **Get my role** `GET /gse/v1/vendors/{id}/my-role`
 
   * [ ] Returns: `{ role }` or `null`.

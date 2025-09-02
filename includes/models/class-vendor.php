@@ -520,6 +520,76 @@ if ( ! class_exists( 'GSE_Vendor' ) ) {
         }
 
         /**
+         * Remove a member from a vendor.
+         *
+         * Prevent removing the last remaining owner.
+         *
+         * @param int $post_id Vendor post ID
+         * @param int $user_id User ID of the member to remove
+         * @return array|WP_Error { removed: true, user_id, role } or WP_Error
+         */
+        public static function remove_member( $post_id, $user_id ) {
+            $post_id = (int) $post_id;
+            $user_id = (int) $user_id;
+
+            if ( $post_id <= 0 || $user_id <= 0 ) {
+                return new WP_Error( 'gse_invalid_id', 'Invalid vendor or user id', array( 'status' => 400 ) );
+            }
+
+            $post = get_post( $post_id );
+            if ( ! $post || ! isset( $post->post_type ) || $post->post_type !== 'vendor' ) {
+                return new WP_Error( 'gse_not_found', 'Vendor not found', array( 'status' => 404 ) );
+            }
+
+            global $wpdb;
+            if ( ! isset( $wpdb ) || ! is_object( $wpdb ) ) {
+                return new WP_Error( 'gse_dependency_missing', 'Database unavailable', array( 'status' => 500 ) );
+            }
+
+            $table_members = isset( $wpdb->prefix ) ? $wpdb->prefix . 'gse_vendor_user_roles' : 'wp_gse_vendor_user_roles';
+
+            // Fetch current membership
+            $current_role = '';
+            if ( method_exists( $wpdb, 'prepare' ) && method_exists( $wpdb, 'get_var' ) ) {
+                $sql = $wpdb->prepare( "SELECT role FROM {$table_members} WHERE vendor_id = %d AND user_id = %d LIMIT 1", $post_id, $user_id );
+                $current_role = (string) $wpdb->get_var( $sql );
+            }
+
+            if ( $current_role === '' ) {
+                return new WP_Error( 'gse_not_found', 'Membership not found', array( 'status' => 404 ) );
+            }
+
+            // Prevent removing the last owner
+            if ( $current_role === 'owner' ) {
+                $owner_count = 0;
+                if ( method_exists( $wpdb, 'prepare' ) && method_exists( $wpdb, 'get_var' ) ) {
+                    $sql = $wpdb->prepare( "SELECT COUNT(*) FROM {$table_members} WHERE vendor_id = %d AND role = 'owner'", $post_id );
+                    $owner_count = (int) $wpdb->get_var( $sql );
+                }
+                if ( $owner_count <= 1 ) {
+                    return new WP_Error( 'gse_conflict', 'Cannot remove the last owner', array( 'status' => 409 ) );
+                }
+            }
+
+            // Perform deletion
+            $deleted = false;
+            if ( method_exists( $wpdb, 'delete' ) ) {
+                $result = $wpdb->delete( $table_members, array( 'vendor_id' => $post_id, 'user_id' => $user_id ), array( '%d', '%d' ) );
+                $deleted = ( $result !== false && $result > 0 );
+            }
+
+            if ( ! $deleted ) {
+                return new WP_Error( 'gse_delete_failed', 'Failed to remove member', array( 'status' => 500 ) );
+            }
+
+            return array(
+                'removed' => true,
+                'user_id' => $user_id,
+                'role' => $current_role,
+            );
+        }
+
+        /**
          * Delete a Vendor post and clean up related membership rows.
          *
          * @param int  $post_id       Vendor post ID
