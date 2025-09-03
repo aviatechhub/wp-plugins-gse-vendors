@@ -26,6 +26,12 @@ if ( ! function_exists( 'gse_vendors_admin_boot' ) ) {
 		if ( function_exists( 'add_action' ) ) {
 			call_user_func( 'add_action', 'admin_init', 'gse_vendors_admin_block_direct_vendor_access' );
 		}
+
+		// Register metabox and save handler (admins only UI)
+		if ( function_exists( 'add_action' ) ) {
+			call_user_func( 'add_action', 'add_meta_boxes', 'gse_vendors_register_basic_info_metabox' );
+			call_user_func( 'add_action', 'save_post_vendor', 'gse_vendors_save_basic_info_metabox', 10, 2 );
+		}
 	}
 }
 
@@ -43,6 +49,112 @@ if ( ! function_exists( 'gse_vendors_admin_hide_vendor_menu' ) ) {
 				call_user_func( 'remove_submenu_page', 'edit.php?post_type=vendor', 'edit.php?post_type=vendor' );
 				call_user_func( 'remove_submenu_page', 'edit.php?post_type=vendor', 'post-new.php?post_type=vendor' );
 			}
+		}
+	}
+}
+
+// Register the "Vendor — Basic Information" metabox for admin users on vendor edit screens.
+if ( ! function_exists( 'gse_vendors_register_basic_info_metabox' ) ) {
+	function gse_vendors_register_basic_info_metabox() {
+		if ( ! gse_vendors_current_user_is_admin() ) {
+			return;
+		}
+		if ( function_exists( 'add_meta_box' ) ) {
+			call_user_func(
+				'add_meta_box',
+				'gse_vendor_basic_info',
+				'Vendor — Basic Information',
+				'gse_vendors_render_basic_info_metabox',
+				'vendor',
+				'normal',
+				'high'
+			);
+		}
+	}
+}
+
+// Render the metabox content.
+if ( ! function_exists( 'gse_vendors_render_basic_info_metabox' ) ) {
+	function gse_vendors_render_basic_info_metabox( $post ) {
+		$post_id = isset( $post->ID ) ? (int) $post->ID : 0;
+		if ( $post_id <= 0 ) { return; }
+
+		// Nonce
+		if ( function_exists( 'wp_nonce_field' ) ) {
+			call_user_func( 'wp_nonce_field', 'gse_vendors_basic_info_save', 'gse_vendors_basic_info_nonce' );
+		}
+
+		$hq = function_exists( 'get_post_meta' ) ? (string) call_user_func( 'get_post_meta', $post_id, 'headquarters', true ) : '';
+		$years = function_exists( 'get_post_meta' ) ? (int) call_user_func( 'get_post_meta', $post_id, 'years_in_operation', true ) : 0;
+		$website = function_exists( 'get_post_meta' ) ? (string) call_user_func( 'get_post_meta', $post_id, 'website_url', true ) : '';
+		$contact = function_exists( 'get_post_meta' ) ? call_user_func( 'get_post_meta', $post_id, 'contact', true ) : array();
+		$contact = is_array( $contact ) ? $contact : array();
+		$email = isset( $contact['email'] ) ? (string) $contact['email'] : '';
+		$phone = isset( $contact['phone'] ) ? (string) $contact['phone'] : '';
+		$whatsapp = isset( $contact['whatsapp'] ) ? (string) $contact['whatsapp'] : '';
+
+		if ( ! function_exists( 'gse_vendors_safe_attr' ) ) {
+			function gse_vendors_safe_attr( $value ) {
+				if ( function_exists( 'esc_attr' ) ) {
+					return call_user_func( 'esc_attr', $value );
+				}
+				return htmlspecialchars( (string) $value, ENT_QUOTES, 'UTF-8' );
+			}
+		}
+
+
+		// Render template
+		$template = GSE_VENDORS_PATH . 'templates/admin/metabox-vendor-basic-info.php';
+        $gse_template_vars = array(
+            'hq' => $hq,
+            'years' => $years,
+            'website' => $website,
+            'email' => $email,
+            'phone' => $phone,
+            'whatsapp' => $whatsapp,
+        );
+        extract( $gse_template_vars, EXTR_OVERWRITE );
+        include $template;
+	}
+}
+
+// Save handler for the metabox (admin-only)
+if ( ! function_exists( 'gse_vendors_save_basic_info_metabox' ) ) {
+	function gse_vendors_save_basic_info_metabox( $post_id, $post ) {
+		// Admin only
+		if ( ! gse_vendors_current_user_is_admin() ) {
+			return;
+		}
+
+		// Verify nonce
+		$nonce_ok = true;
+		if ( function_exists( 'wp_verify_nonce' ) ) {
+			$raw = isset( $_POST['gse_vendors_basic_info_nonce'] ) ? $_POST['gse_vendors_basic_info_nonce'] : '';
+			$nonce = function_exists( 'wp_unslash' ) ? call_user_func( 'wp_unslash', $raw ) : $raw;
+			$nonce_ok = (bool) call_user_func( 'wp_verify_nonce', $nonce, 'gse_vendors_basic_info_save' );
+		}
+		if ( ! $nonce_ok ) { return; }
+
+		// Autosave guard
+		if ( defined( 'DOING_AUTOSAVE' ) && (bool) constant( 'DOING_AUTOSAVE' ) ) { return; }
+
+		// Ensure correct post type
+		if ( ! $post || ! isset( $post->post_type ) || $post->post_type !== 'vendor' ) { return; }
+
+		// Data
+		$meta = isset( $_POST['gse_vendor_meta'] ) && is_array( $_POST['gse_vendor_meta'] ) ? $_POST['gse_vendor_meta'] : array();
+		// Sanitize using existing sanitizers
+		$hq = isset( $meta['headquarters'] ) ? gse_vendors_sanitize_text_meta( $meta['headquarters'] ) : '';
+		$years = isset( $meta['years_in_operation'] ) ? gse_vendors_sanitize_absint_meta( $meta['years_in_operation'] ) : 0;
+		$website = isset( $meta['website_url'] ) ? gse_vendors_sanitize_url_meta( $meta['website_url'] ) : '';
+		$contact = isset( $meta['contact'] ) && is_array( $meta['contact'] ) ? gse_vendors_sanitize_contact_meta( $meta['contact'] ) : array();
+
+		// Persist
+		if ( function_exists( 'update_post_meta' ) ) {
+			call_user_func( 'update_post_meta', $post_id, 'headquarters', $hq );
+			call_user_func( 'update_post_meta', $post_id, 'years_in_operation', $years );
+			call_user_func( 'update_post_meta', $post_id, 'website_url', $website );
+			call_user_func( 'update_post_meta', $post_id, 'contact', $contact );
 		}
 	}
 }
